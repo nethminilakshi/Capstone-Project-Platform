@@ -8,6 +8,7 @@ jobs:
         env:
           VM_NAME: vm-platform-seed
           ZONE: asia-southeast1-a
+          USER_NAME: dimanthanipun02
 
         permissions:
           contents: 'read'
@@ -29,7 +30,9 @@ jobs:
 
           - name: Connect with the vm-platform-seed through SSH
             run: >
-                    gcloud compute ssh ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
-                    --command "echo 'Connected to vm-platform-seed successfully!'"
+                    gcloud compute ssh ${{env.USER_NAME}} ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
+                    --command "echo 'Connected to vm-platform-seed successfully!' &&
+                    pwd && whoami/
+                    "
 
 
