@@ -32,6 +32,9 @@ jobs:
             run: >
               gcloud compute ssh ${{ env.USER_NAME }}@${{ env.VM_NAME }} --zone=${{ env.ZONE }}
               --command "cd Capstone-Project-Platform/ && git pull --recurse-submodules && mvn clean package"
+
+          - name: Stop the vm-platform-seed instance
+            run: gcloud compute instances stop ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
               
 
 
