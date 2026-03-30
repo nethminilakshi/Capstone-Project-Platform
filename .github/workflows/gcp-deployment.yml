@@ -57,13 +57,10 @@ jobs:
           --storage-location=${{ env.REGION }}
 
 
-      - name: Update the instance group with new image
+      - name: Update Managed Instance Group (Rolling Replace)
         run: |
-          gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
-          --region=${{ env.REGION }} \
-          --type=proactive \
-          --max-unavailable=3 \
-          --minimal-action=replace \
-          --replacement-method=recreate \
-          --max-surge=0 \
-          --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }},name=0-1774779740883
+            gcloud compute instance-groups managed rolling-action replace ${{ env.INSTANCE_GROUP }} \
+              --region=${{ env.REGION }} \
+              --max-unavailable=1 \
+              --min-ready=300s \
+              --replacement-method=recreate
