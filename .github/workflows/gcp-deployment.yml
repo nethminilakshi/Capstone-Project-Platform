@@ -10,7 +10,7 @@ jobs:
       INSTANCE_GROUP: mig-platform
       INSTANCE_TEMPLATE: tmp-vm-platform-seed-v2
       REGION: asia-southeast1
-      ZONE: asia-southeast1-c
+      ZONE: asia-southeast1-a
       USER_NAME: dimanthanipun02
       IMAGE_NAME: vm-platform-seed-boot-image-v2
 
