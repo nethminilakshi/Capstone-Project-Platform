@@ -10,7 +10,7 @@ jobs:
       INSTANCE_GROUP: mig-platform
       INSTANCE_TEMPLATE: tmp-vm-platform-seed-v2
       REGION: asia-southeast1
-      ZONE: asia-southeast1-a
+      ZONE: asia-southeast1-c
       USER_NAME: dimanthanipun02
       IMAGE_NAME: vm-platform-seed-boot-image-v2
 
@@ -29,65 +29,41 @@ jobs:
       - name: Set up gcloud Cloud SDK environment
         uses: google-github-actions/setup-gcloud@v3.0.1
 
-      - name: Start the vm-platform-seed
+      - name: Start the vm-platform-seed instance
         run: gcloud compute instances start ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
 
-      - name: Connect and Build
+      - name: Connect with the vm-platform-seed  instance through SSH, pull the latest code, and build the project
         run: >
           gcloud compute ssh ${{ env.USER_NAME }}@${{ env.VM_NAME }} --zone=${{ env.ZONE }}
-          --command "cd Capstone-Project-Platform/ && git pull --recurse-submodules && mvn clean package"
+          --command "echo 'Connected to vm-platform-seed successfully!' &&
+          cd capstone-project-platform/ &&
+          git pull --recurse-submodules &&
+          source ~/.bashrc &&
+          mvn clean package"
 
       - name: Stop the vm-platform-seed instance
         run: gcloud compute instances stop ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
 
       - name: Delete the boot disk image
-        run: gcloud compute images delete ${{ env.IMAGE_NAME }} --quiet
+        run: gcloud compute images delete ${{ env.IMAGE_NAME }}
         continue-on-error: true
 
-      - name: Create a new boot disk image
-        run: >
-          gcloud compute images create ${{ env.IMAGE_NAME }}
-          --source-disk=${{ env.VM_NAME }}
-          --source-disk-zone=${{ env.ZONE }}
+      - name: Create a new boot image with the previous image name
+        run: |
+          gcloud compute images create ${{ env.IMAGE_NAME }} \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --source-disk=${{ env.VM_NAME }} \
+          --source-disk-zone=${{ env.ZONE }} \
           --storage-location=${{ env.REGION }}
 
-      - name: Delete old template
-        run: gcloud compute instance-templates delete ${{ env.INSTANCE_TEMPLATE }} --quiet
-        continue-on-error: true
 
-      - name: Create New Instance Template
+      - name: Update the instance group with new image
         run: |
-            # Metadata script eka file ekakata liyaganna (Safe way)
-            cat <<EOF > startup.sh
-            #!/bin/bash
-            export SDKMAN_DIR="/home/${{ env.USER_NAME }}/.sdkman"
-            [[ -s "\$SDKMAN_DIR/bin/sdkman-init.sh" ]] && source "\$SDKMAN_DIR/bin/sdkman-init.sh"
-            cd /home/${{ env.USER_NAME }}/Capstone-Project-Platform/
-            nohup java -jar ./config-server/target/Config-Server-1.0.0.jar > config.log 2>&1 &
-            sleep 60
-            nohup java -jar ./service-registry/target/Service-Registry-1.0.0.jar > registry.log 2>&1 &
-            sleep 30
-            nohup java -jar ./api-gateway/target/Api-Gateway-1.0.0.jar --server.port=7000 > gateway.log 2>&1 &
-            EOF
-            
-            # Template eka hadanna me file eka use karala
-            gcloud compute instance-templates create ${{ env.INSTANCE_TEMPLATE }} \
-              --region=${{ env.REGION }} \
-              --image=${{ env.IMAGE_NAME }} \
-              --machine-type=e2-medium \
-              --metadata-from-file=startup-script=startup.sh
-      - name: Update the instance group and force recreate
-        run: |
-            gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
-              --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }} \
-              --region=${{ env.REGION }} \
-              --type=proactive \
-              --minimal-action=replace \
-              --replacement-method=recreate \
-              --max-surge=0 \
-              --max-unavailable=3
-
-      - name: Force Recreate Instances
-        run: |
-            gcloud compute instance-groups managed rolling-action restart ${{ env.INSTANCE_GROUP }} \
-              --region=${{ env.REGION }}
+          gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
+          --region=${{ env.REGION }} \
+          --type=proactive \
+          --max-unavailable=3 \
+          --minimal-action=replace \
+          --replacement-method=recreate \
+          --max-surge=0 \
+          --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }},name=0-1774779740883
