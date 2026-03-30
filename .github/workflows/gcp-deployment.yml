@@ -86,3 +86,8 @@ jobs:
               --replacement-method=recreate \
               --max-surge=0 \
               --max-unavailable=3
+
+      - name: Force Recreate Instances
+        run: |
+            gcloud compute instance-groups managed rolling-action restart ${{ env.INSTANCE_GROUP }} \
+              --region=${{ env.REGION }}
