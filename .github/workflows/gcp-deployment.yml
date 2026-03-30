@@ -70,15 +70,13 @@ jobs:
             
                 cd /home/${{ env.USER_NAME }}/Capstone-Project-Platform/
             
-                # 1. Config Server (Wait 60s)
+                # JAR names confirm karala thiyena nisa path tika update kara
                 nohup java -jar ./config-server/target/Config-Server-1.0.0.jar > config_start.log 2>&1 &
                 sleep 60
             
-                # 2. Service Registry (Wait 30s)
                 nohup java -jar ./service-registry/target/Service-Registry-1.0.0.jar > registry_start.log 2>&1 &
                 sleep 30
             
-                # 3. API Gateway (Force Port 7000 for Load Balancer)
                 nohup java -jar ./api-gateway/target/Api-Gateway-1.0.0.jar --server.port=7000 > gateway_start.log 2>&1 &"
 
       - name: Update the instance group and force recreate
