@@ -51,13 +51,32 @@ jobs:
           --source-disk-zone=${{ env.ZONE }}
           --storage-location=${{ env.REGION }}
 
+      - name: Delete old template
+        run: gcloud compute instance-templates delete ${{ env.INSTANCE_TEMPLATE }} --quiet
+        continue-on-error: true
+
+      - name: Create New Instance Template
+        run: |
+              gcloud compute instance-templates create ${{ env.INSTANCE_TEMPLATE }} \
+              --region=${{ env.REGION }} \
+              --image=${{ env.IMAGE_NAME }} \
+              --machine-type=e2-medium \
+              --metadata=startup-script="#!/bin/bash
+                  export SDKMAN_DIR='/home/${{ env.USER_NAME }}/.sdkman'
+                  [[ -s \"\$SDKMAN_DIR/bin/sdkman-init.sh\" ]] && source \"\$SDKMAN_DIR/bin/sdkman-init.sh\"
+                  cd /home/${{ env.USER_NAME }}/Capstone-Project-Platform/
+                  nohup java -jar ./config-server/target/*.jar > config.log 2>&1 &
+                  sleep 60
+                  nohup java -jar ./service-registry/target/*.jar > registry.log 2>&1 &
+                  sleep 30
+                  nohup java -jar ./api-gateway/target/*.jar --server.port=7000 > gateway.log 2>&1 &"
+
       - name: Update the instance group with the new image
         run: >
-            gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }}
-            --region=${{ env.REGION }}
-            --type=proactive
-            --max-unavailable=3
-            --minimal-action=replace
-            --replacement-method=recreate
-            --max-surge=0
-            --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }}
+              gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }}
+              --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }}
+              --region=${{ env.REGION }}
+              --type=proactive
+              --max-unavailable=3
+              --minimal-action=replace
+              --replacement-method=recreate
