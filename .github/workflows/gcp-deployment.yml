@@ -81,9 +81,11 @@ jobs:
 
       - name: Update the instance group and force recreate
         run: |
-          gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
-          --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }} \
-          --region=${{ env.REGION }} \
-          --type=proactive \
-          --minimal-action=replace \
-          --max-unavailable=3
+            gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
+              --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }} \
+              --region=${{ env.REGION }} \
+              --type=proactive \
+              --minimal-action=replace \
+              --replacement-method=recreate \
+              --max-surge=3 \
+              --max-unavailable=0
