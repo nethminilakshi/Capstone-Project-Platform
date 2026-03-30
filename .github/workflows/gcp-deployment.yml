@@ -87,5 +87,5 @@ jobs:
               --type=proactive \
               --minimal-action=replace \
               --replacement-method=recreate \
-              --max-surge=3 \
-              --max-unavailable=0
+              --max-surge=0 \
+              --max-unavailable=3
