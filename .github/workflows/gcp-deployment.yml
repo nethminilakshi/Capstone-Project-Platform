@@ -1,5 +1,7 @@
 name: Capstone Project Platform GCP Deployment
-on: push
+on:
+  push:
+
 
 jobs:
   deploy:
@@ -19,51 +21,45 @@ jobs:
       id-token: 'write'
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Set up gcloud Cloud SDK environment
-        uses: google-github-actions/setup-gcloud@v3.0.1
+      - name: Set up gcloud Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Start the vm-platform-seed instance
+      - name: Start the Seed VM
         run: gcloud compute instances start ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
 
-      - name: Connect with the vm-platform-seed  instance through SSH, pull the latest code, and build the project
-        run: >
-          gcloud compute ssh ${{ env.USER_NAME }}@${{ env.VM_NAME }} --zone=${{ env.ZONE }}
-          --command "echo 'Connected to vm-platform-seed successfully!' &&
-          cd Capstone-Project-Platform/ &&
-          git pull --recurse-submodules &&
-          source ~/.bashrc &&
-          mvn clean package"
+      - name: Build Project on Seed VM
+        run: |
+          gcloud compute ssh ${{ env.USER_NAME }}@${{ env.VM_NAME }} --zone=${{ env.ZONE }} --command "
+            cd /home/${{ env.USER_NAME }}/Capstone-Project-Platform/ &&
+            git pull --recurse-submodules &&
+            source ~/.bashrc &&
+            mvn clean package -DskipTests
+          "
 
-      - name: Stop the vm-platform-seed instance
+      - name: Stop the Seed VM
         run: gcloud compute instances stop ${{ env.VM_NAME }} --zone=${{ env.ZONE }}
 
-      - name: Delete the boot disk image
-        run: gcloud compute images delete ${{ env.IMAGE_NAME }}
-        continue-on-error: true
-
-      - name: Create a new boot image with the previous image name
+      - name: Recreate Boot Image
         run: |
+          gcloud compute images delete ${{ env.IMAGE_NAME }} --quiet || true
           gcloud compute images create ${{ env.IMAGE_NAME }} \
-          --project=${{ secrets.GCP_PROJECT_ID }} \
-          --source-disk=${{ env.VM_NAME }} \
-          --source-disk-zone=${{ env.ZONE }} \
-          --storage-location=${{ env.REGION }}
+            --source-disk=${{ env.VM_NAME }} \
+            --source-disk-zone=${{ env.ZONE }} \
+            --storage-location=${{ env.REGION }}
 
-
-      - name: Update the instance group with new image
+      - name: Update Managed Instance Group (Rolling Replace)
         run: |
-          gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
-          --region=${{ env.REGION }} \
-          --type=proactive \
-          --max-unavailable=3 \
-          --minimal-action=replace \
-          --replacement-method=recreate \
-          --max-surge=0 \
-          --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }},name=0-1774779740883
+          gcloud compute instance-groups managed rolling-action replace ${{ env.INSTANCE_GROUP }} \
+            --region=${{ env.REGION }} \
+            --max-unavailable=1 \
+            --replacement-method=recreate
