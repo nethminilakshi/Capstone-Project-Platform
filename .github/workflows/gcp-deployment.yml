@@ -79,12 +79,11 @@ jobs:
                 # Start API Gateway on Port 7000
                 nohup java -jar ./api-gateway/target/Api-Gateway-1.0.0.jar --server.port=7000 > gateway.log 2>&1 &"
 
-      - name: Update the instance group with the new image
-        run: >
-              gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }}
-              --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }}
-              --region=${{ env.REGION }}
-              --type=proactive
-              --max-unavailable=3
-              --minimal-action=replace
-              --replacement-method=recreate
+      - name: Update the instance group and force recreate
+        run: |
+          gcloud compute instance-groups managed rolling-action start-update ${{ env.INSTANCE_GROUP }} \
+          --version=template=projects/${{ secrets.GCP_PROJECT_ID }}/regions/${{ env.REGION }}/instanceTemplates/${{ env.INSTANCE_TEMPLATE }} \
+          --region=${{ env.REGION }} \
+          --type=proactive \
+          --minimal-action=replace \
+          --max-unavailable=3
