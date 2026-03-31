@@ -56,9 +56,11 @@ jobs:
           --source-disk-zone=${{ env.ZONE }} \
           --storage-location=${{ env.REGION }}
 
+
       - name: Update Managed Instance Group (Rolling Replace)
         run: |
-          gcloud compute instance-groups managed rolling-action replace ${{ env.INSTANCE_GROUP }} \
-          --region=${{ env.REGION }} \
-          --max-unavailable=0 \
-          --replacement-method=recreate
+            gcloud compute instance-groups managed rolling-action replace ${{ env.INSTANCE_GROUP }} \
+              --region=${{ env.REGION }} \
+              --max-unavailable=1 \
+              --min-ready=300s \
+              --replacement-method=recreate
